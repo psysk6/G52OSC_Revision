@@ -1,23 +1,25 @@
 #include <stdio.h>
 #include <unistd.h>
-#include <sys/types.h>
 #include <sys/wait.h>
 
 int main(){
     int iStatus;
+    //fork process
     int iPid = fork();
-    if(iPid <0){
-        printf("fork error\n");
+    //executes all of code following fork
+    if(iPid < 0){
+        printf("its shagged mate\n");
     }
-    else if(iPid == 0){
-        printf("child process\n");
+    //process id assinged to child is 0 so...
+    else if(iPid ==0){
+        //print from child process..
+        printf("child\n");
     }
-    else if(iPid > 0)
-    {
+    //else iPID greater than 0 suggesting it is the parent process..
+    else if(iPid > 0){
+        //so wait until child thread has executed before executing..
         waitpid(iPid,&iStatus,0);
+        //before printing from parent
         printf("parent\n");
     }
-
-
-    return 0;
 }
