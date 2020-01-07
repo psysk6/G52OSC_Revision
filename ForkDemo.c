@@ -1,3 +1,6 @@
+//note fork is not part of posix and therefore this code will only work in Linux
+//
+
 #include <stdio.h>
 #include <unistd.h>
 #include <sys/wait.h>
