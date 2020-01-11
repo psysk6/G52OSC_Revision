@@ -13,7 +13,7 @@
 //number of times that the counter is incremented
 #define NUMBER_OF_PRODUCERS 1 
 #define NUMBER_OF_CONSUMERS 1 
-#define NUMBER_TO_PRODUCE 500
+#define NUMBER_TO_PRODUCE 1000
 
 
 //number of items the producer has created
@@ -23,7 +23,7 @@ int numberConsumed = 0;
 int buffer = 0;
 //numberConsumed
 //exit when the number consumed = the number its meant to post
-
+int temp;
 
 //create the semaphores
 //semaphore semSync for syncing the 2 processes semDelayConsumer to prevent  
@@ -33,61 +33,66 @@ sem_t semSync, semDelayConsumer;
 
 //code to be executed by the consumer thread.
 void * consumer(void * id){
-   while(1){
-       int threadID = ((intptr_t)id);
-       if(numberConsumed == NUMBER_TO_PRODUCE){
-           printf("exiting consumer\n");
-           pthread_exit(0);
-       }
-       else{
-            //if buffer is full..
-            if(buffer == 0){
-                //..consumer does not need cpu time goes to sleep..
+
+    //threadID is the ID of the thread- this will become more useful later on when I do multiple producers & consumers
+    int threadID = ((intptr_t)id);
+    sem_wait(&semDelayConsumer);
+    while(1){
+        sem_wait(&semSync);
+        if(numberConsumed == NUMBER_TO_PRODUCE){
+            sem_post(&semDelayConsumer);
+            sem_post(&semSync);
+            printf("exit");
+            pthread_exit(0);
+        }
+        if(buffer >= 1){
+            buffer--;
+            numberConsumed++;
+            temp = buffer;
+            printf("consumer id = %d, buffer = %d\n",threadID,buffer);
+            sem_post(&semSync);
+            if(temp >= 0){
                 sem_post(&semDelayConsumer);
             }
-            else{
-                //enter critical section..
-                sem_wait(&semSync);
-                numberConsumed++;
-                buffer--;
-                printf("consumer id = %d buffer size = %d\n",threadID,buffer);
-                //..exit critical section
-                
-                sem_post(&semSync);
-            }
-       }
-       sem_post(&semDelayConsumer);
-   }
-   
+        }
+        else{
+            sem_post(&semSync);
+            sem_post(&semDelayConsumer);
+        }
+      
+    }
+
 }
 
 
 //code to be executed by the producer thread.
 void * producer(void * id){
-    //prevent the consumer from attempting to consume from the empty buffer (would seg fault)
     int threadID = ((intptr_t)id);
-    sem_wait(&semDelayConsumer);
-    //infinitely loop the consumer to produce
     while(1){
-
+        //wait the sync semaphore-> enter critical section...
         sem_wait(&semSync);
-        //if the producer has produced the maximum number of items..
+        //if the producer has produced the correct number..
         if(numberProduced == NUMBER_TO_PRODUCE){
-            //..exit the thread (with the successful message)
             printf("exiting producer\n");
+            //..exit the thread
             pthread_exit(0);
         }
-        //..else the producer.. 
-        else{
-            numberProduced++;
-            buffer++;
-            printf("producer id = %d buffer size = %d\n",threadID,buffer);
-            //allow consumer to enter critical section
-            sem_post(&semSync);
-            sem_post(&semDelayConsumer);
+        //else..
+        //increment the buffer
+        buffer++;
+        //keep track of the number produced
+        numberProduced++;
+        printf("producer id = %d, buffer = %d\n",threadID,buffer);
+        
+        //if there is at least one item in the buffer..
+        if(buffer >=1){
+            //..wake up the consumer give it an opportunity to consume..
+            printf("waking up the consumer\n");
+            sem_post(&semDelayConsumer);   
         }
+        //..exit the critical section
+        sem_post(&semSync);
     }
-
 }
 
 
